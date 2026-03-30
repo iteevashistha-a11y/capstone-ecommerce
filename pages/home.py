@@ -106,22 +106,18 @@ def show_home():
     with hero_c1:
         if st.button("🔍 Visual Search", use_container_width=True, key="hero_visual"):
             st.session_state.page = "Image Search"
-            st.session_state["sidebar_page_select"] = "Image Search"
             st.rerun()
     with hero_c2:
         if st.button("🤖 AI Recommendations", use_container_width=True, key="hero_rec"):
             st.session_state.page = "Agents"
-            st.session_state["sidebar_page_select"] = "Agents"
             st.rerun()
     with hero_c3:
         if st.button("💰 Smart Deals", use_container_width=True, key="hero_deals"):
             st.session_state.page = "Products"
-            st.session_state["sidebar_page_select"] = "Products"
             st.rerun()
     with hero_c4:
         if st.button("🛒 Go to Cart", use_container_width=True, key="hero_cart"):
             st.session_state.page = "Cart"
-            st.session_state["sidebar_page_select"] = "Cart"
             st.rerun()
 
     # ── Quick Search Bar ──────────────────────────────────────────────────────
@@ -137,7 +133,6 @@ def show_home():
         if st.button("Search 🚀", key="hero_search_btn", use_container_width=True):
             if search_query:
                 st.session_state.page = "Products"
-                st.session_state["sidebar_page_select"] = "Products"
                 st.session_state["product_search_query"] = search_query
                 st.rerun()
 
@@ -168,7 +163,6 @@ def show_home():
                 use_container_width=True
             ):
                 st.session_state.page = "Products"
-                st.session_state["sidebar_page_select"] = "Products"
                 st.session_state["selected_category"] = cat["name"]
                 st.rerun()
 

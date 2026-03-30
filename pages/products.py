@@ -255,11 +255,11 @@ def show_products():
     if not page_products:
         st.markdown("""
         <div style="text-align: center; padding: 4rem 2rem;
-             background: rgba(108,59,255,0.05); border-radius: 25px;
-             border: 1px dashed rgba(130,80,255,0.3);">
+             background: #f8fafc; border-radius: 25px;
+             border: 1px dashed #cbd5e1;">
             <div style="font-size: 4rem; margin-bottom: 1rem;">😕</div>
-            <h3 style="color: #c4b5fd;">No products found</h3>
-            <p style="color: rgba(196,181,253,0.6);">Try adjusting your filters or search query</p>
+            <h3 style="color: #1e3a8a;">No products found</h3>
+            <p style="color: #475569;">Try adjusting your filters or search query</p>
         </div>
         """, unsafe_allow_html=True)
     else:
