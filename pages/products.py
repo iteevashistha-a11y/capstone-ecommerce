@@ -214,7 +214,7 @@ def show_products():
         """, unsafe_allow_html=True)
 
     # ── Results Summary ────────────────────────────────────────────────────────
-    col_info, col_view = st.columns([3, 1])
+    col_info, _ = st.columns([3, 1])
     with col_info:
         st.markdown(
             f"<p style='color: #475569; font-weight: 600;'>"
@@ -317,12 +317,8 @@ def show_products():
                 with st.expander("📋 Specs & Reviews"):
                     with st.container():
                         st.markdown(f"""
-                        <div style="color: #e8e0ff;">
-                            <p style="font-size: 0.95rem; line-height: 1.6; color: rgba(196,181,253,0.9);">
-                                {product['description']}
-                            </p>
-                            <hr style="border-color: rgba(130,80,255,0.2);"/>
-                            <h4 style="color: #a78bfa; margin-bottom: 0.8rem;">📐 Specifications</h4>
+                        <div>
+                            <h4 style="color:#1e3a8a; margin-bottom:0.8rem;">📐 Specifications</h4>
                         </div>
                         """, unsafe_allow_html=True)
 
@@ -330,14 +326,14 @@ def show_products():
                             for spec_key, spec_val in product["specs"].items():
                                 st.markdown(
                                     f"<div style='display:flex; justify-content:space-between; "
-                                    f"padding:0.3rem 0; border-bottom: 1px solid rgba(130,80,255,0.1);'>"
-                                    f"<span style='color:#c4b5fd; font-weight:700;'>{spec_key}</span>"
-                                    f"<span style='color:#e8e0ff;'>{spec_val}</span></div>",
+                                    f"padding:0.4rem 0; border-bottom:1px solid #e2e8f0;'>"
+                                    f"<span style='color:#374151; font-weight:700;'>{spec_key}</span>"
+                                    f"<span style='color:#1e3a8a; font-weight:600;'>{spec_val}</span></div>",
                                     unsafe_allow_html=True
                                 )
 
                         st.markdown(
-                            "<h4 style='color: #a78bfa; margin: 1rem 0 0.8rem 0;'>💬 Reviews</h4>",
+                            "<h4 style='color:#1e3a8a; margin:1rem 0 0.8rem 0;'>💬 Reviews</h4>",
                             unsafe_allow_html=True
                         )
                         reviews = get_reviews(product["id"])
@@ -345,17 +341,17 @@ def show_products():
                             for rev in reviews:
                                 rev_stars = get_stars(rev[0])
                                 st.markdown(
-                                    f"<div style='background: rgba(108,59,255,0.1); border-radius:10px; "
-                                    f"padding: 0.8rem; margin-bottom: 0.5rem;'>"
-                                    f"<div style='color: #fbbf24;'>{rev_stars}</div>"
-                                    f"<div style='color: #e8e0ff; font-size: 0.9rem;'>{rev[1]}</div>"
-                                    f"<div style='color: rgba(196,181,253,0.5); font-size: 0.75rem;'>"
+                                    f"<div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; "
+                                    f"padding:0.8rem; margin-bottom:0.5rem;'>"
+                                    f"<div style='color:#f59e0b;'>{rev_stars}</div>"
+                                    f"<div style='color:#1f2937; font-size:0.9rem;'>{rev[1]}</div>"
+                                    f"<div style='color:#64748b; font-size:0.75rem;'>"
                                     f"— {rev[3]}</div></div>",
                                     unsafe_allow_html=True
                                 )
                         else:
                             st.markdown(
-                                "<p style='color: rgba(196,181,253,0.5); font-size:0.85rem;'>"
+                                "<p style='color:#64748b; font-size:0.85rem;'>"
                                 "No reviews yet. Be the first!</p>",
                                 unsafe_allow_html=True
                             )
