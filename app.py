@@ -484,25 +484,23 @@ def show_auth_page():
         tab1, tab2 = st.tabs(["🔑 Login", "📝 Sign Up"])
 
         with tab1:
-            with st.form("login_form"):
-                st.markdown("<h3 style='color:#1e3a8a; text-align:center;'>Welcome Back!</h3>", unsafe_allow_html=True)
-                email = st.text_input("Email", placeholder="your@email.com")
-                password = st.text_input("Password", type="password", placeholder="••••••••")
-                login_btn = st.form_submit_button("🚀 Login", use_container_width=True)
-
-                if login_btn:
-                    if email and password:
-                        user = verify_user(email, password)
-                        if user:
-                            st.session_state.logged_in = True
-                            st.session_state.user = user
-                            st.session_state.cart_count = get_cart_count(user["id"])
-                            st.success("Welcome back! Redirecting...")
-                            st.rerun()
-                        else:
-                            st.error("Invalid email or password.")
+            st.markdown("<h3 style='color:#1e3a8a; text-align:center;'>Welcome Back!</h3>", unsafe_allow_html=True)
+            email = st.text_input("Email", placeholder="your@email.com", key="login_email")
+            password = st.text_input("Password", placeholder="••••••••", key="login_password",
+                                     type="password", autocomplete="off")
+            if st.button("🚀 Login", use_container_width=True, key="login_btn"):
+                if email and password:
+                    user = verify_user(email, password)
+                    if user:
+                        st.session_state.logged_in = True
+                        st.session_state.user = user
+                        st.session_state.cart_count = get_cart_count(user["id"])
+                        st.success("Welcome back! Redirecting...")
+                        st.rerun()
                     else:
-                        st.warning("Please fill in all fields.")
+                        st.error("Invalid email or password.")
+                else:
+                    st.warning("Please fill in all fields.")
 
             st.markdown("""
             <div style="text-align:center; margin-top:1rem; padding:1rem;
