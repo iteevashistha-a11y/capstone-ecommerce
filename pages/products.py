@@ -17,6 +17,12 @@ DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 ITEMS_PER_PAGE = 8
 
 
+def get_product_image_url(product):
+    """Generate a consistent product image URL using product id as seed."""
+    keywords = ",".join(product.get("image_keywords", [product["category"].lower()]))
+    return f"https://picsum.photos/seed/{product['id'] * 7}/300/200"
+
+
 def get_stars(rating):
     full = int(rating)
     half = 1 if rating - full >= 0.5 else 0
@@ -192,12 +198,25 @@ def show_products():
     elif sort_by == "Name: A to Z":
         filtered.sort(key=lambda x: x["name"])
 
+    # ── Agent Activity Banner ──────────────────────────────────────────────────
+    if search_query:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg,#dbeafe,#eff6ff); border:1px solid #93c5fd;
+             border-radius:12px; padding:0.7rem 1rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-size:1.2rem;">🤖</span>
+            <span style="color:#1e3a8a; font-weight:700;">ProductSearchAgent</span>
+            <span style="color:#475569; font-size:0.9rem;">— running semantic search for <strong>"{search_query}"</strong> across {len(PRODUCTS)} products</span>
+            <span style="margin-left:auto; background:#10b981; color:white; border-radius:20px;
+                 padding:0.2rem 0.8rem; font-size:0.78rem; font-weight:700;">✅ {len(filtered)} results</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     # ── Results Summary ────────────────────────────────────────────────────────
     col_info, col_view = st.columns([3, 1])
     with col_info:
         st.markdown(
-            f"<p style='color: #c4b5fd; font-weight: 600;'>"
-            f"Showing <strong style='color:#a78bfa'>{len(filtered)}</strong> products</p>",
+            f"<p style='color: #475569; font-weight: 600;'>"
+            f"Showing <strong style='color:#2563eb'>{len(filtered)}</strong> products</p>",
             unsafe_allow_html=True
         )
 
@@ -231,50 +250,70 @@ def show_products():
         for i, product in enumerate(page_products):
             with cols[i % 3]:
                 stars = get_stars(product["rating"])
-                stock_badge = (
-                    '<span style="color: #10b981; font-size: 0.8rem; font-weight: 700;">✅ In Stock</span>'
-                    if product["in_stock"]
-                    else '<span style="color: #ef4444; font-size: 0.8rem; font-weight: 700;">❌ Out of Stock</span>'
-                )
+                in_stock = product["in_stock"]
+                img_url = get_product_image_url(product)
+
+                # Product image
+                try:
+                    st.image(img_url, use_container_width=True)
+                except Exception:
+                    st.markdown(f"<div style='text-align:center;font-size:4rem;'>{product['emoji']}</div>",
+                                unsafe_allow_html=True)
 
                 st.markdown(f"""
-                <div class="product-card">
-                    <span class="product-emoji">{product['emoji']}</span>
-                    <div style="font-size: 0.75rem; color: rgba(196,181,253,0.6);
-                         text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem;">
-                        {product['category']}
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px;
+                     padding:1rem; margin-bottom:0.5rem;">
+                    <div style="font-size:0.7rem; color:#64748b; text-transform:uppercase;
+                         letter-spacing:1px; margin-bottom:0.3rem;">{product['category']}</div>
+                    <div style="font-size:1rem; font-weight:800; color:#1e3a8a;
+                         margin-bottom:0.4rem;">{product['name']}</div>
+                    <div style="color:#f59e0b; margin-bottom:0.3rem;">{stars}
+                        <span style="color:#64748b; font-size:0.85rem;"> {product['rating']}</span></div>
+                    <div style="font-size:1.2rem; font-weight:900; color:#2563eb;
+                         margin-bottom:0.6rem;">₹{product['price']:,}</div>
+                    <div style="font-size:0.85rem; color:#475569; line-height:1.5;
+                         margin-bottom:0.6rem;">{product['description']}</div>
+                    <div style="font-size:0.8rem; font-weight:700;">
+                        {'<span style="color:#10b981;">✅ In Stock</span>' if in_stock else '<span style="color:#ef4444;">❌ Out of Stock</span>'}
                     </div>
-                    <div class="product-name">{product['name']}</div>
-                    <div class="product-rating">{stars} <span style="color: #c4b5fd;">{product['rating']}</span></div>
-                    <div class="product-price">&#8377;{product['price']:,}</div>
-                    <div style="color: rgba(196,181,253,0.7); font-size: 0.85rem;
-                         margin-bottom: 0.8rem; line-height: 1.4;">
-                        {product['description'][:90]}...
-                    </div>
-                    {stock_badge}
                 </div>
                 """, unsafe_allow_html=True)
 
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
                     if st.button(
-                        "🛒 Cart",
+                        "🛒 Add to Cart",
                         key=f"prod_cart_{product['id']}_{i}",
                         use_container_width=True,
-                        disabled=not product["in_stock"]
+                        disabled=not in_stock
                     ):
                         if st.session_state.get("user"):
                             try:
                                 count = add_to_cart(product["id"], st.session_state.user["id"])
                                 st.session_state.cart_count = count
-                                st.success(f"Added {product['emoji']} to cart!")
+                                st.success(f"✅ Added {product['name']} to cart!")
                             except Exception as e:
                                 st.error(f"Error: {e}")
                         else:
                             st.warning("Please login first.")
 
                 with btn_col2:
-                    with st.expander("📋 Details"):
+                    if st.button("🚀 Buy Now", key=f"buy_{product['id']}_{i}",
+                                 use_container_width=True, disabled=not in_stock):
+                        if st.session_state.get("user"):
+                            try:
+                                count = add_to_cart(product["id"], st.session_state.user["id"])
+                                st.session_state.cart_count = count
+                                st.session_state.page = "Cart"
+                                st.session_state["sidebar_page_select"] = "Cart"
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+                        else:
+                            st.warning("Please login first.")
+
+                with st.expander("📋 Specs & Reviews"):
+                    with st.container():
                         st.markdown(f"""
                         <div style="color: #e8e0ff;">
                             <p style="font-size: 0.95rem; line-height: 1.6; color: rgba(196,181,253,0.9);">

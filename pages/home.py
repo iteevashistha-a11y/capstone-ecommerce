@@ -80,26 +80,30 @@ def show_home():
             Trovia uses cutting-edge AI to help you discover products, compare prices,
             and shop smarter than ever before.
         </p>
-        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <span style="background: rgba(108,59,255,0.2); border: 1px solid rgba(130,80,255,0.4);
-                color: #c4b5fd; border-radius: 25px; padding: 0.5rem 1.5rem; font-weight: 700;">
-                🔍 Visual Search
-            </span>
-            <span style="background: rgba(108,59,255,0.2); border: 1px solid rgba(130,80,255,0.4);
-                color: #c4b5fd; border-radius: 25px; padding: 0.5rem 1.5rem; font-weight: 700;">
-                🤖 AI Recommendations
-            </span>
-            <span style="background: rgba(108,59,255,0.2); border: 1px solid rgba(130,80,255,0.4);
-                color: #c4b5fd; border-radius: 25px; padding: 0.5rem 1.5rem; font-weight: 700;">
-                💰 Smart Deals
-            </span>
-            <span style="background: rgba(108,59,255,0.2); border: 1px solid rgba(130,80,255,0.4);
-                color: #c4b5fd; border-radius: 25px; padding: 0.5rem 1.5rem; font-weight: 700;">
-                🛡️ Secure Payments
-            </span>
-        </div>
     </div>
     """, unsafe_allow_html=True)
+
+    hero_c1, hero_c2, hero_c3, hero_c4 = st.columns(4)
+    with hero_c1:
+        if st.button("🔍 Visual Search", use_container_width=True, key="hero_visual"):
+            st.session_state.page = "Image Search"
+            st.session_state["sidebar_page_select"] = "Image Search"
+            st.rerun()
+    with hero_c2:
+        if st.button("🤖 AI Recommendations", use_container_width=True, key="hero_rec"):
+            st.session_state.page = "Agents"
+            st.session_state["sidebar_page_select"] = "Agents"
+            st.rerun()
+    with hero_c3:
+        if st.button("💰 Smart Deals", use_container_width=True, key="hero_deals"):
+            st.session_state.page = "Products"
+            st.session_state["sidebar_page_select"] = "Products"
+            st.rerun()
+    with hero_c4:
+        if st.button("🛒 Go to Cart", use_container_width=True, key="hero_cart"):
+            st.session_state.page = "Cart"
+            st.session_state["sidebar_page_select"] = "Cart"
+            st.rerun()
 
     # ── Quick Search Bar ──────────────────────────────────────────────────────
     col1, col2 = st.columns([4, 1])
@@ -114,6 +118,7 @@ def show_home():
         if st.button("Search 🚀", key="hero_search_btn", use_container_width=True):
             if search_query:
                 st.session_state.page = "Products"
+                st.session_state["sidebar_page_select"] = "Products"
                 st.session_state["product_search_query"] = search_query
                 st.rerun()
 
@@ -144,6 +149,7 @@ def show_home():
                 use_container_width=True
             ):
                 st.session_state.page = "Products"
+                st.session_state["sidebar_page_select"] = "Products"
                 st.session_state["selected_category"] = cat["name"]
                 st.rerun()
 

@@ -150,6 +150,18 @@ def show_cart():
 
     cart_items = get_cart_items(user_id)
 
+    if cart_items:
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#fef9c3,#fefce8); border:1px solid #fde68a;
+             border-radius:12px; padding:0.7rem 1rem; margin-bottom:1rem;">
+            <span style="font-size:1.1rem;">🤖</span>
+            <strong style="color:#92400e;"> PriceOptimizerAgent</strong>
+            <span style="color:#78350f; font-size:0.9rem;"> — analysing {len(cart_items)} item(s) in your cart for best deals & coupons</span>
+            <span style="margin-left:auto; float:right; background:#f59e0b; color:white;
+                 border-radius:20px; padding:0.15rem 0.7rem; font-size:0.78rem; font-weight:700;">⚡ Active</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     if not cart_items:
         # Empty cart state
         st.markdown("""

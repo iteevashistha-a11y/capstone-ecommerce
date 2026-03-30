@@ -554,14 +554,17 @@ def render_navbar():
         </div>
         """, unsafe_allow_html=True)
 
+        # Sync radio to current page so button-driven navigation isn't overridden
+        if st.session_state.page in page_keys:
+            st.session_state["sidebar_page_select"] = st.session_state.page
+
         selected_page = st.radio(
             "Navigate",
             options=page_keys,
-            index=page_keys.index(st.session_state.page) if st.session_state.page in page_keys else 0,
             key="sidebar_page_select"
         )
 
-        # Set page when changed
+        # Set page when user manually clicks sidebar
         if selected_page != st.session_state.page:
             st.session_state.page = selected_page
             st.rerun()
