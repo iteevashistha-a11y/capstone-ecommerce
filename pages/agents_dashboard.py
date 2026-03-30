@@ -4,9 +4,15 @@ Trovia — AI Agents Dashboard (Ruflo-inspired Swarm)
 
 import streamlit as st
 import sys, os, sqlite3, json
+import plotly.graph_objects as go
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.trovia_agents import TroviaSwarm
+from agents.market_agent import get_market_analysis, get_growth_drivers
+from agents.financial_agent import get_financial_projections, get_unit_economics, get_profitability_timeline
+from agents.strategy_agent import get_gtm_strategy, get_pricing_strategy, get_success_metrics
+from agents.technical_agent import get_technology_stack, get_implementation_phases, get_performance_benchmarks
+from agents.usecase_agent import get_use_cases, get_solution_types
 from data.products import PRODUCTS, CATEGORIES
 
 
@@ -68,7 +74,7 @@ def show_agents_dashboard():
     # ── Swarm Status ──────────────────────────────────────────────────────────
     status = swarm.status()
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Agents Active", status["agents_run"] if "agents_run" in status else 3)
+    c1.metric("Agents Active", 8)
     c2.metric("Total Runs", status["runs"])
     c3.metric("Topology", status["topology"].title())
     c4.metric("Inspired By", "Ruflo v3.5")
@@ -76,7 +82,7 @@ def show_agents_dashboard():
     st.markdown("---")
 
     # ── Agent Cards ────────────────────────────────────────────────────────────
-    st.markdown("### 🧩 Swarm Agents")
+    st.markdown("### 🧩 Shopping Agents")
     col1, col2, col3 = st.columns(3)
     with col1:
         render_agent_card(
@@ -100,11 +106,52 @@ def show_agents_dashboard():
             "Evaluates your cart, finds best coupons, checks budget and scores each item's value."
         )
 
+    st.markdown("### 🧠 Business Intelligence Agents")
+    b1, b2, b3 = st.columns(3)
+    with b1:
+        render_agent_card(
+            "MarketAnalysisAgent", "📊",
+            ["TAM/SAM/SOM", "India vs Global", "growth-drivers"],
+            "linear-gradient(135deg, #ede9fe, #f5f3ff)",
+            "Analyses global e-commerce market opportunity, India vs International segmentation, and growth drivers."
+        )
+    with b2:
+        render_agent_card(
+            "FinancialAgent", "📈",
+            ["revenue-projections", "unit-economics", "profitability"],
+            "linear-gradient(135deg, #fce7f3, #fdf2f8)",
+            "Models 5-year revenue projections, LTV:CAC ratios, and path to profitability across markets."
+        )
+    with b3:
+        render_agent_card(
+            "StrategyAgent", "🎯",
+            ["GTM-phases", "pricing-tiers", "partnerships"],
+            "linear-gradient(135deg, #ffedd5, #fff7ed)",
+            "Defines go-to-market phases, customer acquisition strategy, pricing tiers and success metrics."
+        )
+
+    b4, b5, _ = st.columns(3)
+    with b4:
+        render_agent_card(
+            "TechnicalAgent", "⚙️",
+            ["tech-stack", "roadmap", "benchmarks"],
+            "linear-gradient(135deg, #d1fae5, #ecfdf5)",
+            "Designs technology architecture, phased implementation roadmap and performance benchmarks."
+        )
+    with b5:
+        render_agent_card(
+            "UseCasesAgent", "🎪",
+            ["Amazon", "Myntra", "Enterprise"],
+            "linear-gradient(135deg, #fef3c7, #fffbeb)",
+            "Detailed use-case scenarios for Amazon sellers, Myntra, luxury brands, dropshipping and enterprise."
+        )
+
     st.markdown("---")
 
     # ── Tabs for each agent ────────────────────────────────────────────────────
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🔍 Smart Search", "💡 Recommendations", "💰 Price Optimizer", "⚡ Full Swarm Run"
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+        "🔍 Smart Search", "💡 Recommendations", "💰 Price Optimizer", "⚡ Full Swarm Run",
+        "📊 Market Analysis", "📈 Financial", "🎯 Strategy", "⚙️ Technical", "🎪 Use Cases"
     ])
 
     # ── Tab 1: Product Search Agent ───────────────────────────────────────────
@@ -310,3 +357,179 @@ def show_agents_dashboard():
                 log = swarm._run_log[-6:]
                 for entry in log:
                     st.json(entry)
+
+    # ── Tab 5: Market Analysis Agent ─────────────────────────────────────────
+    with tab5:
+        st.markdown("#### 📊 MarketAnalysisAgent — Global Market Opportunity")
+        market = get_market_analysis()
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Global TAM", f"${market['global']['tam']['value']}B", market['global']['tam']['range'])
+        c2.metric("Global SAM", f"${market['global']['sam']['value']}B", market['global']['sam']['range'])
+        c3.metric("Year 5 SOM", f"${market['global']['som']['value']*1000:.0f}M", market['global']['som']['range'])
+
+        st.markdown("---")
+        col_i, col_int = st.columns(2)
+        with col_i:
+            st.markdown("**🇮🇳 India**")
+            st.metric("TAM", market['india']['tam']['range'])
+            st.metric("Growth Rate", market['india']['growth_rate'])
+            st.metric("E-Commerce Size", f"${market['india']['e_commerce_size']}B")
+            st.metric("Sellers", f"{market['india']['sellers']:,}")
+        with col_int:
+            st.markdown("**🌍 International**")
+            st.metric("TAM", market['international']['tam']['range'])
+            st.metric("Growth Rate", market['international']['growth_rate'])
+            st.metric("E-Commerce Size", f"${market['international']['e_commerce_size']:,}T")
+            st.metric("Sellers", f"{market['international']['sellers']:,}")
+
+        st.markdown("##### 📈 Key Growth Drivers")
+        for d in get_growth_drivers():
+            with st.expander(d['name']):
+                st.markdown(f"🇮🇳 **India:** {d['india_impact']}")
+                st.markdown(f"🌍 **International:** {d['international_impact']}")
+                st.caption(d['driver'])
+
+    # ── Tab 6: Financial Agent ────────────────────────────────────────────────
+    with tab6:
+        st.markdown("#### 📈 FinancialAgent — Revenue Projections & Unit Economics")
+        projections = get_financial_projections()
+
+        scenario = st.radio("Scenario", ["conservative", "optimistic"], horizontal=True, key="fin_scenario")
+        years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"]
+        global_vals = [projections['global'][scenario][f'year_{i}'] for i in range(1, 6)]
+        india_vals  = [projections['india'][scenario][f'year_{i}'] for i in range(1, 6)]
+        intl_vals   = [projections['international'][scenario][f'year_{i}'] for i in range(1, 6)]
+
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name='Global', x=years, y=global_vals, marker_color='#0ea5e9'))
+        fig.add_trace(go.Bar(name='India', x=years, y=india_vals, marker_color='#f97316'))
+        fig.add_trace(go.Bar(name='International', x=years, y=intl_vals, marker_color='#8b5cf6'))
+        fig.update_layout(title="Revenue Projections ($M)", barmode='group', height=350,
+                          plot_bgcolor='white', paper_bgcolor='white')
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("##### Unit Economics")
+        econ = get_unit_economics()
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Avg CAC (Global)", f"${econ['global']['customer_acquisition_cost']['average']}")
+        c2.metric("Avg LTV (Global)", f"${econ['global']['lifetime_value']['average']:,}")
+        c3.metric("LTV:CAC Target", econ['global']['ltv_cac_ratio']['target'])
+
+        st.markdown("##### Path to Profitability (Global)")
+        for yr, data in get_profitability_timeline()['global'].items():
+            ca, cb, cc = st.columns([1, 3, 2])
+            ca.markdown(f"**{yr.replace('_', ' ').title()}**")
+            cb.markdown(f"Revenue: **${data['revenue']:,}** | Costs: ${data['costs']:,}")
+            icon = "🟢" if data['profit'] >= 0 else "🔴"
+            cc.markdown(f"{icon} {data['status']}")
+
+    # ── Tab 7: Strategy Agent ─────────────────────────────────────────────────
+    with tab7:
+        st.markdown("#### 🎯 StrategyAgent — Go-to-Market Strategy")
+        for phase_key, phase in get_gtm_strategy().items():
+            label = phase_key.replace('_', ' ').title()
+            with st.expander(f"📅 {phase.get('duration', '')} — {label}"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    target = phase.get('target_customer') or ', '.join(phase.get('new_targets', []))
+                    st.markdown(f"**Target:** {target}")
+                    if 'TAM' in phase:
+                        st.markdown(f"**TAM:** {phase['TAM']}")
+                    st.markdown(f"**Budget:** ${phase.get('budget', 0):,}")
+                with c2:
+                    channels = phase.get('distribution_channels', [])
+                    if channels:
+                        st.markdown("**Channels:**")
+                        for ch in channels:
+                            st.markdown(f"- {ch}")
+
+        st.markdown("##### 💵 Pricing Tiers")
+        pcols = st.columns(4)
+        for i, (_, tier) in enumerate(get_pricing_strategy().items()):
+            with pcols[i]:
+                st.markdown(f"""
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;
+                     padding:1rem;text-align:center;margin-bottom:0.5rem;">
+                    <div style="font-weight:800;color:#1e3a8a;">{tier['name']}</div>
+                    <div style="font-size:1.1rem;color:#0ea5e9;font-weight:700;">{tier['monthly_cost']}</div>
+                    <div style="font-size:0.78rem;color:#64748b;">{tier.get('descriptions_per_month','Unlimited')} desc/mo</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("##### 📊 Success Metrics")
+        for cat, vals in get_success_metrics().items():
+            with st.expander(cat.replace('_', ' ').title()):
+                for k, v in vals.items():
+                    st.markdown(f"**{k.replace('_', ' ').title()}:** {v}")
+
+    # ── Tab 8: Technical Agent ────────────────────────────────────────────────
+    with tab8:
+        st.markdown("#### ⚙️ TechnicalAgent — Architecture & Implementation")
+
+        st.markdown("##### 🛠️ Technology Stack")
+        stack = get_technology_stack()
+        tcols = st.columns(len(stack))
+        for i, (layer, tools) in enumerate(stack.items()):
+            with tcols[i]:
+                st.markdown(f"**{layer.upper()}**")
+                for k, v in tools.items():
+                    if isinstance(v, list):
+                        st.caption(f"{k}: {', '.join(v[:2])}")
+                    else:
+                        st.caption(f"{k}: {v}")
+
+        st.markdown("##### 🗺️ Implementation Phases")
+        for phase_key, phase in get_implementation_phases().items():
+            with st.expander(f"{phase_key.replace('_',' ').title()} — {phase['duration']} | {phase['budget']}"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("**Deliverables:**")
+                    for d in phase['deliverables']:
+                        st.markdown(f"- {d}")
+                with c2:
+                    st.markdown("**Target Metrics:**")
+                    for k, v in phase['metrics'].items():
+                        st.markdown(f"- {k.replace('_',' ')}: {v}")
+
+        st.markdown("##### 🚀 Performance Benchmarks")
+        benchmarks = get_performance_benchmarks()
+        bcols = st.columns(len(benchmarks))
+        for i, (cat, vals) in enumerate(benchmarks.items()):
+            with bcols[i]:
+                st.markdown(f"**{cat.replace('_',' ').title()}**")
+                for k, v in vals.items():
+                    st.caption(f"{k.replace('_',' ')}: {v}")
+
+    # ── Tab 9: Use Cases Agent ────────────────────────────────────────────────
+    with tab9:
+        st.markdown("#### 🎪 UseCasesAgent — Customer Scenarios")
+        for uc_key, uc in get_use_cases().items():
+            with st.expander(f"📦 {uc['name']}"):
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    st.markdown("**Problem:**")
+                    for k, v in uc['problem'].items():
+                        st.caption(f"{k.replace('_',' ')}: {v}")
+                with c2:
+                    st.markdown("**Solution Features:**")
+                    for f in uc['solution_features']:
+                        st.markdown(f"- {f}")
+                with c3:
+                    st.markdown("**Financial Impact:**")
+                    for k, v in uc['financial_impact'].items():
+                        st.markdown(f"**{k.replace('_',' ').title()}:** {v}")
+
+        st.markdown("##### 🔧 Solution Tiers")
+        scols = st.columns(4)
+        for i, (_, sol) in enumerate(get_solution_types().items()):
+            with scols[i]:
+                st.markdown(f"""
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;">
+                    <div style="font-weight:800;color:#1e3a8a;font-size:0.9rem;">{sol['name']}</div>
+                    <div style="color:#64748b;font-size:0.75rem;">{sol['tier']}</div>
+                    <div style="color:#0ea5e9;font-weight:700;margin-top:0.3rem;">{sol['cost_per']}/desc</div>
+                    <div style="font-size:0.75rem;color:#475569;">Quality: {sol['quality']}</div>
+                    <div style="font-size:0.75rem;color:#475569;">Speed: {sol['speed']}</div>
+                </div>
+                """, unsafe_allow_html=True)
