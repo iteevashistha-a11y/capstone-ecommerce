@@ -18,9 +18,11 @@ ITEMS_PER_PAGE = 8
 
 
 def get_product_image_url(product):
-    """Generate a consistent product image URL using product id as seed."""
-    keywords = ",".join(product.get("image_keywords", [product["category"].lower()]))
-    return f"https://picsum.photos/seed/{product['id'] * 7}/300/200"
+    """Return a relevant product image using image_keywords for loremflickr."""
+    keywords = product.get("image_keywords", [product["category"].lower()])
+    keyword_str = ",".join(keywords[:2])
+    lock = product["id"]  # keeps the same image per product every load
+    return f"https://loremflickr.com/400/280/{keyword_str}?lock={lock}"
 
 
 def get_stars(rating):
