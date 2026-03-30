@@ -18,26 +18,45 @@ def get_stars(rating):
     return "★" * full + "½" * half + "☆" * empty
 
 
+def get_product_image_url(product):
+    keywords = product.get("image_keywords", [product["category"].lower()])
+    keyword_str = ",".join(keywords[:2])
+    return f"https://loremflickr.com/400/260/{keyword_str}?lock={product['id']}"
+
+
 def render_product_card(product, col_key=""):
     stars = get_stars(product["rating"])
-    price_formatted = f"₹{product['price']:,}"
+    img_url = get_product_image_url(product)
+    in_stock = product.get("in_stock", True)
+
+    try:
+        st.image(img_url, use_container_width=True)
+    except Exception:
+        st.markdown(f"<div style='text-align:center;font-size:4rem;padding:1rem;'>{product['emoji']}</div>",
+                    unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="product-card">
-        <span class="product-emoji">{product['emoji']}</span>
-        <div class="product-name">{product['name']}</div>
-        <div class="product-rating">{stars} {product['rating']}</div>
-        <div class="product-price">{price_formatted}</div>
-        <div style="color: rgba(196,181,253,0.7); font-size: 0.85rem; margin-bottom: 1rem;">
-            {product['description'][:80]}...
-        </div>
+    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:0 0 14px 14px;
+         padding:0.9rem; margin-bottom:0.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:0.7rem; color:#64748b; text-transform:uppercase;
+             letter-spacing:1px; margin-bottom:0.2rem;">{product['category']}</div>
+        <div style="font-size:1rem; font-weight:800; color:#1e3a8a;
+             margin-bottom:0.3rem;">{product['name']}</div>
+        <div style="color:#f59e0b; margin-bottom:0.3rem; font-size:0.9rem;">{stars}
+            <span style="color:#374151; font-weight:600;"> {product['rating']}</span></div>
+        <div style="font-size:1.15rem; font-weight:900; color:#2563eb;
+             margin-bottom:0.5rem;">₹{product['price']:,}</div>
+        <div style="font-size:0.82rem; color:#374151; line-height:1.5;
+             margin-bottom:0.5rem;">{product['description'][:100]}...</div>
+        {'<span style="color:#10b981; font-size:0.8rem; font-weight:700;">✅ In Stock</span>' if in_stock else '<span style="color:#ef4444; font-size:0.8rem; font-weight:700;">❌ Out of Stock</span>'}
     </div>
     """, unsafe_allow_html=True)
 
     if st.button(
         f"🛒 Add to Cart",
         key=f"home_cart_{product['id']}_{col_key}",
-        use_container_width=True
+        use_container_width=True,
+        disabled=not in_stock
     ):
         add_to_cart_action(product)
 
@@ -183,6 +202,28 @@ def show_home():
 
     st.markdown("---")
 
+    # ── Ruflo Swarm Banner ────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="background:linear-gradient(135deg,#1e3a8a,#0ea5e9); border-radius:16px;
+         padding:1.2rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div style="font-size:2rem;">🤖</div>
+        <div>
+            <div style="color:#ffffff; font-size:1.1rem; font-weight:900;">Ruflo Swarm — 3 Agents Active</div>
+            <div style="color:#bae6fd; font-size:0.85rem;">
+                ProductSearchAgent · RecommendationAgent · PriceOptimizerAgent running in parallel
+            </div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <span style="background:rgba(255,255,255,0.2); color:#fff; border-radius:20px;
+                 padding:0.3rem 0.8rem; font-size:0.78rem; font-weight:700;">🔍 Semantic Search</span>
+            <span style="background:rgba(255,255,255,0.2); color:#fff; border-radius:20px;
+                 padding:0.3rem 0.8rem; font-size:0.78rem; font-weight:700;">💡 Personalised Recs</span>
+            <span style="background:rgba(255,255,255,0.2); color:#fff; border-radius:20px;
+                 padding:0.3rem 0.8rem; font-size:0.78rem; font-weight:700;">💰 Price Optimiser</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     # ── Featured Products ─────────────────────────────────────────────────────
     st.markdown("""
     <h2 style="color: #1e3a8a; font-weight: 800; text-align: center; margin-bottom: 1.5rem;">
@@ -209,51 +250,57 @@ def show_home():
 
     with ai_col1:
         st.markdown("""
-        <div class="product-card" style="text-align: left;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px;
+             padding:1.5rem; text-align:left; height:100%;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.8rem;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.8rem;">
                 Visual Search
             </div>
-            <div style="color: rgba(196,181,253,0.8); font-size: 0.95rem; line-height: 1.6;">
+            <div style="color:#374151; font-size: 0.92rem; line-height: 1.6;">
                 Upload any image — a photo you saw online, from a magazine, or in real life —
-                and our AI will identify the product and find the best matches in our catalog instantly.
+                and our AI will identify the product and find the best matches instantly.
             </div>
-            <div style="margin-top: 1rem;">
-                <span class="badge">GPT-4o Vision</span>
+            <div style="margin-top:1rem; background:#2563eb; color:white; border-radius:20px;
+                 padding:0.3rem 0.9rem; display:inline-block; font-size:0.8rem; font-weight:700;">
+                GPT-4o Vision
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with ai_col2:
         st.markdown("""
-        <div class="product-card" style="text-align: left;">
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px;
+             padding:1.5rem; text-align:left; height:100%;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">💡</div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.8rem;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.8rem;">
                 Smart Recommendations
             </div>
-            <div style="color: rgba(196,181,253,0.8); font-size: 0.95rem; line-height: 1.6;">
-                Our AI shopping assistant Shopi analyzes your preferences, budget, and browsing history
-                to recommend products you'll actually love. Ask in plain English!
+            <div style="color:#374151; font-size: 0.92rem; line-height: 1.6;">
+                Our Ruflo swarm agents analyse your cart, preferences and budget
+                to recommend products you'll actually love — instantly.
             </div>
-            <div style="margin-top: 1rem;">
-                <span class="badge">GPT-4o Mini</span>
+            <div style="margin-top:1rem; background:#10b981; color:white; border-radius:20px;
+                 padding:0.3rem 0.9rem; display:inline-block; font-size:0.8rem; font-weight:700;">
+                Ruflo Swarm Agent
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with ai_col3:
         st.markdown("""
-        <div class="product-card" style="text-align: left;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">🔔</div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.8rem;">
-                Price Alerts
+        <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:16px;
+             padding:1.5rem; text-align:left; height:100%;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">💰</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.8rem;">
+                Price Optimizer
             </div>
-            <div style="color: rgba(196,181,253,0.8); font-size: 0.95rem; line-height: 1.6;">
-                Tell Shopi your budget and she'll filter products, suggest the best value picks,
-                and let you know which items offer the best deals right now.
+            <div style="color:#374151; font-size: 0.92rem; line-height: 1.6;">
+                PriceOptimizerAgent scans your cart, finds best coupons,
+                checks your budget and scores every item's value in real-time.
             </div>
-            <div style="margin-top: 1rem;">
-                <span class="badge">Real-time</span>
+            <div style="margin-top:1rem; background:#f97316; color:white; border-radius:20px;
+                 padding:0.3rem 0.9rem; display:inline-block; font-size:0.8rem; font-weight:700;">
+                PriceOptimizerAgent
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -272,16 +319,20 @@ def show_home():
     for i, product in enumerate(trending):
         with trend_cols[i]:
             stars = get_stars(product["rating"])
+            img_url = get_product_image_url(product)
+            try:
+                st.image(img_url, use_container_width=True)
+            except Exception:
+                st.markdown(f"<div style='text-align:center;font-size:3rem;'>{product['emoji']}</div>",
+                            unsafe_allow_html=True)
             st.markdown(f"""
-            <div class="product-card">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #ef4444;
-                     text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px;">
-                    🔥 Trending
-                </div>
-                <span class="product-emoji">{product['emoji']}</span>
-                <div class="product-name">{product['name']}</div>
-                <div class="product-rating">{stars}</div>
-                <div class="product-price">₹{product['price']:,}</div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:0 0 12px 12px;
+                 padding:0.8rem; margin-bottom:0.5rem;">
+                <div style="font-size:0.72rem; font-weight:700; color:#ef4444;
+                     text-transform:uppercase; margin-bottom:0.3rem;">🔥 Trending</div>
+                <div style="font-weight:800; color:#1e3a8a; font-size:0.95rem;">{product['name']}</div>
+                <div style="color:#f59e0b; font-size:0.85rem;">{stars}</div>
+                <div style="font-weight:900; color:#2563eb; font-size:1.1rem;">₹{product['price']:,}</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button(
