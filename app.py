@@ -414,8 +414,15 @@ def inject_global_css():
     }
 
     /* Hide password eye icon */
-    button[data-testid="stPasswordFieldToggle"] {
+    button[data-testid="stPasswordFieldToggle"],
+    [data-testid="stPasswordFieldToggle"],
+    .stTextInput button,
+    input[type="password"] ~ button,
+    div[data-baseweb="input"] button {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
