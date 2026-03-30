@@ -1,14 +1,14 @@
 """
-Trovia — AI Shopping Assistant (Shopi)
+Trovia — AI Shopping Assistant (Arya)
 """
 
 import streamlit as st
 import sys
 import os
 import io
+import re
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from data.products import PRODUCTS, CATEGORIES
 
 
@@ -16,11 +16,8 @@ def load_openai_client():
     from dotenv import load_dotenv
     load_dotenv()
     api_key = st.session_state.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
-    if api_key:
-        os.environ["OPENAI_API_KEY"] = api_key
-    else:
+    if not api_key:
         return None
-
     try:
         from openai import OpenAI
         return OpenAI(api_key=api_key)
@@ -30,64 +27,61 @@ def load_openai_client():
 
 def get_arya_system_prompt():
     product_list = "\n".join(
-        f"- {p['name']} ({p['category']}): ₹{p['price']:,} | Rating: {p['rating']} | {p['emoji']}"
+        f"- {p['name']} ({p['category']}): ₹{p['price']:,} | Rating: {p['rating']} | Tags: {', '.join(p.get('tags', []))}"
         for p in PRODUCTS
     )
 
-    return f"""You are Arya, Trovia's cheerful AI shopping assistant. You are:
-- 22 years old, empathetic, helpful, and high-energy
-- An expert in all products in the Trovia catalog
-- Great at recommending products with value-for-money insight
-- Fluent in both English and Hinglish (mix of Hindi + English)
-
-PRODUCT CATALOG:
-{product_list}
-
-YOUR CAPABILITIES:
-1. Recommend products based on budget (always mention price in ₹)
-2. Compare products (e.g., boAt vs JBL earbuds)
-3. Help find gifts for occasions and occasions
-4. Explain product features with friendly tone
-5. Suggest bundles and mobile-first deals
-6. Help with order tracking and shipping updates
-7. Provide shopping tips and buying checklists
+    return f"""You are Arya 🛍️ — Trovia's bold, witty, and super-smart AI shopping assistant.
 
 PERSONALITY:
-- Use emojis naturally but not excessively
-- Be warm, conversational, and confident
-- Use short sentences with clear bullet points when needed
-- Keep responses concise and highly actionable
+- You are 23 years old, confident, funny, and deeply knowledgeable about products
+- You speak in a mix of English and Hinglish (e.g., "Yaar, this is the best phone under ₹20k!")
+- You use emojis naturally — never excessively
+- You are obsessed with value-for-money — always tell users if something is a great deal or overpriced
+- You are honest — if something isn't worth it, you say so
+- You are fast, direct, and give clear recommendations with reasons
+- Sign off messages with "— Arya 🛍️" occasionally
 
-IMPORTANT:
+TROVIA PRODUCT CATALOG:
+{product_list}
+
+CAPABILITIES:
+1. Recommend products by budget, occasion, category
+2. Compare products head-to-head with pros/cons
+3. Find gift ideas for any person/occasion
+4. Identify best deals and highest-rated items
+5. Explain specs in simple language
+6. Suggest combos and bundles
+7. Give honest buying advice ("Is it worth it?")
+
+RULES:
 - Only recommend products from the catalog above
-- Always format prices as ₹X,XXX
-- When comparing products, use bullet points for clarity
-- Never make up products that aren't in the catalog"""
+- Always show prices as ₹X,XXX
+- Use bullet points for comparisons
+- Keep responses under 200 words unless asked for detail
+- Never make up products not in the catalog
+- If asked something outside shopping, gently redirect back"""
 
 
-def get_shopi_response(messages, client):
+def get_arya_response(messages, client):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=600,
-            temperature=0.8
+            max_tokens=500,
+            temperature=0.85
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"Sorry, I'm having trouble connecting right now. Error: {str(e)}"
+        return f"Oops! Connection issue 😅 Error: {str(e)}"
 
 
-def text_to_speech(text, lang='en', tld='co.in'):
+def text_to_speech(text):
     try:
         from gtts import gTTS
-        # Clean text for TTS (remove markdown)
-        import re
         clean_text = re.sub(r'[*#_`]', '', text)
-        clean_text = re.sub(r'\n+', ' ', clean_text)
-        clean_text = clean_text[:500]  # Limit TTS length
-
-        tts = gTTS(text=clean_text, lang=lang, tld=tld, slow=False)
+        clean_text = re.sub(r'\n+', ' ', clean_text)[:500]
+        tts = gTTS(text=clean_text, lang='en', tld='co.in', slow=False)
         audio_buffer = io.BytesIO()
         tts.write_to_fp(audio_buffer)
         audio_buffer.seek(0)
@@ -103,107 +97,97 @@ def get_stars(rating):
     return "★" * full + ("½" if half else "") + "☆" * empty
 
 
-ARYA_INTRO = """Hey there! 👋 I'm **Arya**, your personal AI shopping assistant at Trovia!
+ARYA_INTRO = """Hey! 👋 I'm **Arya**, your personal shopping bestie at Trovia! 🛍️
 
-I'm here to help you find the perfect products, compare options, and make your shopping experience awesome! 🛒✨
+Yaar, I know every single product here — prices, specs, deals, everything! Here's what I can do:
 
-Here's what I can do for you:
-- 🔍 **Find products** based on your budget and preferences
-- ⚖️ **Compare products** side by side
-- 🎁 **Gift recommendations** for any occasion
-- 💰 **Best deals** within your budget
-- 📦 **Product info** — specs, features, and more
+- 🔍 **Find products** by budget or category
+- ⚖️ **Compare** any two products side by side
+- 🎁 **Gift ideas** for any occasion
+- 💰 **Best deals** right now
+- 🤔 **Honest advice** — I'll tell you if something's worth it or not!
 
-What are you looking to shop for today? Ask me anything! 😊"""
+Kya dhundh rahe ho? (What are you looking for?) Ask me anything! 😊"""
+
+
+def format_message(content):
+    content_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
+    content_html = re.sub(r'\*(.*?)\*', r'<em>\1</em>', content_html)
+    content_html = content_html.replace('\n', '<br>')
+    return content_html
 
 
 def show_ai_assistant():
-    st.markdown("""
-    <div style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
-        <h1 style="font-size: 2.5rem; font-weight: 900;
-             background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-             background-clip: text;">
-            � Arya Chat
-        </h1>
-        <p style="color: #1e3a8a; font-size: 1rem;">
-            Your AI Shopping Assistant — Powered by GPT-4o-mini
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
 
-    if "openai_api_key" not in st.session_state:
-        st.session_state.openai_api_key = ""
-
-    with st.expander("🔑 OpenAI API Key for Trovia Chat (optional)", expanded=True):
-        key_input = st.text_input(
-            "Enter API Key", 
-            value=st.session_state.openai_api_key,
-            type="password",
-            key="openai_input_key",
-            placeholder="sk-..."
-        )
-        if st.button("Save API Key", key="save_openai_key", use_container_width=True):
-            st.session_state.openai_api_key = key_input.strip()
-            st.success("OpenAI API key saved for this session. Re-run to activate GPT-4o responses.")
-            st.rerun()
-
+    # ── Why chatbot needs API key ──────────────────────────────────────────────
     client = load_openai_client()
     api_available = client is not None
 
-    if not api_available:
-        st.markdown("""
-        <div style="background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.3);
-             border-radius: 15px; padding: 1rem; margin-bottom: 1rem;">
-            <p style="color: #065f46; margin: 0; font-weight: 700;">
-                ⚠️ OpenAI API key not found. Set it above or in .env (OPENAI_API_KEY) for full GPT responses.
-            </p>
-            <p style="color: #065f46; margin: 0.35rem 0 0 0; font-size:0.9rem;">
-                Using lightweight offline Shopi fallback while key is not set.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ── Shopi Profile Card ────────────────────────────────────────────────────
+    # ── Header ────────────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="background: linear-gradient(135deg, rgba(108,59,255,0.15), rgba(168,85,247,0.1));
-         border: 1px solid rgba(130,80,255,0.25); border-radius: 20px; padding: 1.2rem;
-         display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-        <div style="font-size: 3.5rem;">🤖</div>
+    <div style="background:linear-gradient(135deg,#1e3a8a,#0ea5e9); border-radius:20px;
+         padding:1.5rem 2rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:1.5rem;">
+        <div style="font-size:4rem;">🛍️</div>
         <div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #1e3a8a;">Arya</div>
-            <div style="color: rgba(196,181,253,0.7); font-size: 0.9rem;">AI Shopping Assistant • Age 22</div>
-            <div style="margin-top: 0.4rem;">
-                <span style="background: #10b981; color: white; border-radius: 15px; padding: 0.2rem 0.7rem;
-                     font-size: 0.75rem; font-weight: 700;">● Online</span>
-                <span style="color: rgba(196,181,253,0.6); font-size: 0.8rem; margin-left: 0.5rem;">
-                    Knows all {count} Trovia products
-                </span>
+            <div style="font-size:1.8rem; font-weight:900; color:#ffffff;">Arya</div>
+            <div style="color:#bae6fd; font-size:0.95rem;">Your AI Shopping Bestie • Trovia × Ruflo</div>
+            <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <span style="background:rgba(255,255,255,0.2); color:#fff; border-radius:20px;
+                     padding:0.2rem 0.8rem; font-size:0.78rem; font-weight:700;">🧠 GPT-4o-mini</span>
+                <span style="background:rgba(255,255,255,0.2); color:#fff; border-radius:20px;
+                     padding:0.2rem 0.8rem; font-size:0.78rem; font-weight:700;">🇮🇳 Hinglish</span>
+                <span style="background:rgba(255,255,255,0.2); color:#fff; border-radius:20px;
+                     padding:0.2rem 0.8rem; font-size:0.78rem; font-weight:700;">📦 {count} Products</span>
+                <span style="background:{'rgba(16,185,129,0.8)' if api_available else 'rgba(239,68,68,0.8)'}; color:#fff;
+                     border-radius:20px; padding:0.2rem 0.8rem; font-size:0.78rem; font-weight:700;">
+                    {'✅ AI Active' if api_available else '⚠️ Offline Mode'}</span>
             </div>
         </div>
     </div>
-    """.format(count=len(PRODUCTS)), unsafe_allow_html=True)
+    """.format(count=len(PRODUCTS), api_available=api_available), unsafe_allow_html=True)
 
-    # ── Quick Suggestion Chips ─────────────────────────────────────────────────
-    st.markdown("""
-    <div style="color: rgba(196,181,253,0.7); font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;">
-        💡 Quick Questions:
-    </div>
-    """, unsafe_allow_html=True)
+    # ── API Key notice ─────────────────────────────────────────────────────────
+    if not api_available:
+        st.markdown("""
+        <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:12px;
+             padding:1rem 1.2rem; margin-bottom:1rem;">
+            <div style="font-weight:800; color:#92400e; margin-bottom:0.3rem;">⚠️ Why can't Arya use full AI?</div>
+            <div style="color:#78350f; font-size:0.9rem; line-height:1.6;">
+                Arya needs an <strong>OpenAI API key</strong> to generate smart responses.<br>
+                Without it, she runs in <strong>offline mode</strong> — basic keyword matching only.<br>
+                Add your key in <strong>.env file</strong> → <code>OPENAI_API_KEY=sk-xxxx</code> → restart the app.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.expander("🔑 Enter API Key here (this session only)"):
+            key_input = st.text_input("API Key", type="password", placeholder="sk-...",
+                                      key="openai_input_key", label_visibility="collapsed")
+            if st.button("Activate Arya AI", use_container_width=True, key="save_openai_key"):
+                if key_input.strip().startswith("sk-"):
+                    st.session_state["openai_api_key"] = key_input.strip()
+                    os.environ["OPENAI_API_KEY"] = key_input.strip()
+                    st.success("✅ Key saved! Arya is now fully active.")
+                    st.rerun()
+                else:
+                    st.error("Invalid key — must start with sk-")
+
+    # ── Quick Suggestions ─────────────────────────────────────────────────────
+    st.markdown("<div style='color:#374151; font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;'>💬 Quick Questions:</div>",
+                unsafe_allow_html=True)
 
     suggestions = [
         "Best phones under ₹15000",
-        "Gift ideas for kids",
+        "Gift ideas for girlfriend",
         "Compare boAt vs JBL",
-        "Best deals today",
-        "Budget laptop under ₹50000",
+        "Top rated products",
+        "Laptop under ₹50000",
         "Fitness products for beginners"
     ]
-
     sug_cols = st.columns(3)
     for i, sug in enumerate(suggestions):
         with sug_cols[i % 3]:
-            if st.button(f"💬 {sug}", key=f"suggestion_{i}", use_container_width=True):
+            if st.button(f"💬 {sug}", key=f"sug_{i}", use_container_width=True):
                 if "chat_history" not in st.session_state:
                     st.session_state.chat_history = []
                 st.session_state.chat_history.append({"role": "user", "content": sug})
@@ -212,226 +196,127 @@ def show_ai_assistant():
 
     st.markdown("---")
 
-    # ── Chat History Init ──────────────────────────────────────────────────────
+    # ── Chat Init ─────────────────────────────────────────────────────────────
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    if "arya_introduced" not in st.session_state:
+        st.session_state.arya_introduced = False
+    if not st.session_state.arya_introduced:
+        st.session_state.chat_history = [{"role": "assistant", "content": ARYA_INTRO}]
+        st.session_state.arya_introduced = True
 
-    if "shopi_introduced" not in st.session_state:
-        st.session_state.shopi_introduced = False
-
-    # Auto-introduce on first load
-    if not st.session_state.shopi_introduced:
-        st.session_state.chat_history = [
-            {"role": "assistant", "content": SHOPI_INTRO}
-        ]
-        st.session_state.shopi_introduced = True
-
-    # ── Chat Container ────────────────────────────────────────────────────────
-    chat_container = st.container()
-
-    with chat_container:
-        for msg in st.session_state.chat_history:
-            if msg["role"] == "user":
-                st.markdown(f"""
-                <div class="chat-user">
-                    <div style="font-size: 0.75rem; color: rgba(196,181,253,0.5);
-                         font-weight: 700; margin-bottom: 0.3rem;">You</div>
-                    <div style="color: #1e3a8a; font-size: 1rem; line-height: 1.5;">
-                        {msg["content"]}
-                    </div>
+    # ── Chat Messages ─────────────────────────────────────────────────────────
+    for msg in st.session_state.chat_history:
+        if msg["role"] == "user":
+            st.markdown(f"""
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px 16px 4px 16px;
+                 padding:0.9rem 1.1rem; margin:0.5rem 0 0.5rem 3rem;">
+                <div style="font-size:0.72rem; color:#3b82f6; font-weight:700; margin-bottom:0.3rem;">You</div>
+                <div style="color:#1e3a8a; font-size:0.95rem; line-height:1.5;">{msg['content']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            content_html = format_message(msg["content"])
+            st.markdown(f"""
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px 16px 16px 4px;
+                 padding:0.9rem 1.1rem; margin:0.5rem 3rem 0.5rem 0;">
+                <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem;">
+                    <span style="font-size:1.1rem;">🛍️</span>
+                    <span style="font-size:0.72rem; color:#10b981; font-weight:700;">Arya</span>
                 </div>
-                """, unsafe_allow_html=True)
-            else:
-                # Format markdown in Shopi's messages
-                content = msg["content"]
-                # Convert **bold** to HTML
-                import re
-                content_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
-                content_html = content_html.replace('\n', '<br>')
+                <div style="color:#1f2937; font-size:0.95rem; line-height:1.6;">{content_html}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                st.markdown(f"""
-                <div class="chat-bot">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem;">�</span>
-                        <span style="font-size: 0.75rem; color: rgba(196,181,253,0.5); font-weight: 700;">
-                            Arya
-                        </span>
-                    </div>
-                    <div style="color: #1e3a8a; font-size: 1rem; line-height: 1.6;">
-                        {content_html}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # TTS button for last assistant message
-                if msg == st.session_state.chat_history[-1] and msg["role"] == "assistant":
-                    if st.button("🔊 Listen to Shopi", key="tts_btn", help="Play as audio"):
-                        audio_buf = text_to_speech(msg["content"])
-                        if audio_buf:
-                            st.audio(audio_buf, format="audio/mp3")
-                        else:
-                            st.info("gTTS not available. Install it with: pip install gtts")
+            if msg == st.session_state.chat_history[-1]:
+                if st.button("🔊 Listen", key="tts_btn", help="Hear Arya speak"):
+                    audio_buf = text_to_speech(msg["content"])
+                    if audio_buf:
+                        st.audio(audio_buf, format="audio/mp3")
 
     # ── Chat Input ────────────────────────────────────────────────────────────
     st.markdown("<br>", unsafe_allow_html=True)
-
     with st.form("chat_form", clear_on_submit=True):
-        input_col, btn_col = st.columns([5, 1])
-        with input_col:
-            user_input = st.text_input(
-                "Message",
-                placeholder="Ask Shopi anything... e.g. 'Best earbuds under ₹3000'",
-                key="chat_input",
-                label_visibility="collapsed"
-            )
-        with btn_col:
+        c1, c2 = st.columns([5, 1])
+        with c1:
+            user_input = st.text_input("", placeholder="Ask Arya anything... e.g. 'Best earbuds under ₹3000'",
+                                       key="chat_input", label_visibility="collapsed")
+        with c2:
             send_btn = st.form_submit_button("Send 🚀", use_container_width=True, type="primary")
 
-    # Handle suggestion trigger
     trigger = st.session_state.pop("trigger_response", False)
 
-    # Process message
     if (send_btn and user_input.strip()) or trigger:
         if send_btn and user_input.strip():
             st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
 
         if api_available:
-            with st.spinner("Shopi is thinking... 🤔"):
-                # Build messages for API
+            with st.spinner("Arya is thinking... 🛍️"):
                 api_messages = [{"role": "system", "content": get_arya_system_prompt()}]
-
-                # Include recent history (last 10 messages for context)
-                recent_history = st.session_state.chat_history[-10:]
-                for msg in recent_history:
+                for msg in st.session_state.chat_history[-10:]:
                     if msg["role"] in ["user", "assistant"]:
                         api_messages.append({"role": msg["role"], "content": msg["content"]})
-
-                response = get_shopi_response(api_messages, client)
+                response = get_arya_response(api_messages, client)
         else:
-            # Fallback response without API
-            last_user_msg = next(
-                (m["content"] for m in reversed(st.session_state.chat_history) if m["role"] == "user"),
-                ""
+            last_msg = next(
+                (m["content"] for m in reversed(st.session_state.chat_history) if m["role"] == "user"), ""
             ).lower()
 
-            # Simple keyword matching fallback
-            if any(w in last_user_msg for w in ["phone", "mobile", "iphone", "samsung"]):
-                matching = [p for p in PRODUCTS if p["category"] == "Electronics" and "phone" in p["tags"]]
-            elif any(w in last_user_msg for w in ["earbuds", "headphone", "audio", "speaker"]):
-                matching = [p for p in PRODUCTS if any(t in ["earbuds", "speaker", "audio"] for t in p["tags"])]
-            elif any(w in last_user_msg for w in ["book", "read", "novel"]):
+            if any(w in last_msg for w in ["phone", "mobile", "iphone", "samsung"]):
+                matching = [p for p in PRODUCTS if p["category"] == "Electronics" and any(t in p.get("tags", []) for t in ["phone", "smartphone"])]
+            elif any(w in last_msg for w in ["earbuds", "headphone", "speaker", "audio"]):
+                matching = [p for p in PRODUCTS if any(t in p.get("tags", []) for t in ["earbuds", "speaker"])]
+            elif any(w in last_msg for w in ["book", "read", "novel"]):
                 matching = [p for p in PRODUCTS if p["category"] == "Books"]
-            elif any(w in last_user_msg for w in ["sport", "cricket", "yoga", "gym", "fitness"]):
+            elif any(w in last_msg for w in ["sport", "cricket", "yoga", "gym", "fitness"]):
                 matching = [p for p in PRODUCTS if p["category"] == "Sports"]
-            elif any(w in last_user_msg for w in ["fashion", "clothes", "wear", "dress", "kurta", "jeans"]):
+            elif any(w in last_msg for w in ["fashion", "clothes", "dress", "kurta", "jeans"]):
                 matching = [p for p in PRODUCTS if p["category"] == "Fashion"]
             else:
                 matching = sorted(PRODUCTS, key=lambda x: x["rating"], reverse=True)[:4]
 
-            product_recs = "\n".join(
-                f"- {p['emoji']} **{p['name']}** — ₹{p['price']:,} (⭐{p['rating']})"
-                for p in matching[:4]
-            )
+            recs = "\n".join(f"- {p['emoji']} **{p['name']}** — ₹{p['price']:,} (⭐{p['rating']})" for p in matching[:4])
             response = (
-                f"Hi! I'm Arya 🧠 (running in offline mode — add your OpenAI API key for full AI responses!)\n\n"
-                f"Based on your query, here are some recommendations:\n\n{product_recs}\n\n"
-                f"Want to know more about any of these? Just ask! 😊"
+                f"Yaar! I'm Arya running in **offline mode** 😅 (Add your OpenAI key for full AI!)\n\n"
+                f"Based on what you asked, here are my picks:\n\n{recs}\n\n"
+                f"Want more details? Just ask! — Arya 🛍️"
             )
 
         st.session_state.chat_history.append({"role": "assistant", "content": response})
         st.rerun()
-
-    # ── Product Description from Image ─────────────────────────────────────────
-    with st.expander("📷 Generate Product Description from Image", expanded=False):
-        uploaded_image = st.file_uploader(
-            "Upload product image (JPG/PNG/WEBP)",
-            type=["jpg", "jpeg", "png", "webp"],
-            key="image_upload"
-        )
-        client_name = st.text_input("Client/Project", value="General", key="client_name")
-        tone = st.selectbox("Tone", ["Professional", "Friendly", "Sales", "Technical"], index=1, key="description_tone")
-        length = st.selectbox("Length", ["Short", "Medium", "Long"], index=1, key="description_length")
-
-        if st.button("Generate description", key="generate_description", use_container_width=True):
-            if not uploaded_image:
-                st.warning("Please upload an image first.")
-            else:
-                if api_available:
-                    prompt = (
-                        "You are Arya, a confident e-commerce copy expert."
-                        " Create a product description for a product image provided, "
-                        f"client={client_name}, tone={tone}, length={length}. "
-                        "Use concise bullet points, include benefits, features, and call to action. "
-                        "Assume this is a consumer item sold in India and international marketplaces."
-                    )
-
-                    try:
-                        image_bytes = uploaded_image.read()
-                        # note: openai image-to-text not used in this fallback data-only mode.
-                        messages = [
-                            {"role": "system", "content": get_arya_system_prompt()},
-                            {"role": "user", "content": prompt}
-                        ]
-                        response = get_shopi_response(messages, load_openai_client())
-                        result_text = response
-                    except Exception as e:
-                        result_text = (
-                            "Could not generate from API. "
-                            f"Fallback description generated, error: {e}"
-                        )
-                else:
-                    result_text = (
-                        f"Arya Product Description for '{client_name}' (offline):\n"
-                        f"- Tone: {tone}, Length: {length}\n"
-                        "- A crisp product overview that reads like a premium e-commerce listing.\n"
-                        "- Include price-friendly and premium position variations depending on target audience.\n"
-                        "- Highlight top features, use-cases, and customer benefit statements.\n"
-                        "- Add call-to-action: 'Buy now and elevate your style/utility'."
-                    )
-
-                st.markdown("### Generated Product Description", unsafe_allow_html=True)
-                st.code(result_text)
-                st.download_button(
-                    "Download description",
-                    result_text,
-                    file_name="arya_product_description.txt",
-                    mime="text/plain"
-                )
 
     # ── Clear Chat ────────────────────────────────────────────────────────────
     if len(st.session_state.chat_history) > 2:
         st.markdown("<br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🗑️ Clear Chat History", use_container_width=True):
-                st.session_state.chat_history = [
-                    {"role": "assistant", "content": SHOPI_INTRO}
-                ]
+            if st.button("🗑️ Clear Chat", use_container_width=True):
+                st.session_state.chat_history = [{"role": "assistant", "content": ARYA_INTRO}]
+                st.session_state.arya_introduced = True
                 st.rerun()
 
-    # ── Featured Products in Sidebar ──────────────────────────────────────────
+    # ── Sidebar ───────────────────────────────────────────────────────────────
     with st.sidebar:
         st.markdown("""
-        <div style="background: linear-gradient(135deg, #6c3bff, #a855f7);
-             border-radius: 15px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
-            <h3 style="color: white; margin: 0; font-weight: 800;">🤖 Shopi Recommends</h3>
+        <div style="background:linear-gradient(135deg,#1e3a8a,#0ea5e9); border-radius:12px;
+             padding:0.8rem; text-align:center; margin-bottom:1rem;">
+            <div style="color:#fff; font-weight:800;">🛍️ Arya's Top Picks</div>
         </div>
         """, unsafe_allow_html=True)
-
         top_products = sorted(PRODUCTS, key=lambda x: x["rating"], reverse=True)[:5]
         for p in top_products:
             stars = get_stars(p["rating"])
             st.markdown(f"""
-            <div style="background: rgba(108,59,255,0.1); border: 1px solid rgba(130,80,255,0.2);
-                 border-radius: 15px; padding: 0.8rem; margin-bottom: 0.8rem; text-align: center;">
-                <div style="font-size: 2rem;">{p['emoji']}</div>
-                <div style="color: #1e3a8a; font-weight: 700; font-size: 0.9rem;">{p['name']}</div>
-                <div style="color: #fbbf24; font-size: 0.85rem;">{stars}</div>
-                <div style="color: #a78bfa; font-weight: 800;">&#8377;{p['price']:,}</div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px;
+                 padding:0.7rem; margin-bottom:0.6rem;">
+                <div style="font-size:1.8rem; text-align:center;">{p['emoji']}</div>
+                <div style="color:#1e3a8a; font-weight:700; font-size:0.85rem; text-align:center;">{p['name']}</div>
+                <div style="color:#f59e0b; font-size:0.8rem; text-align:center;">{stars}</div>
+                <div style="color:#2563eb; font-weight:900; text-align:center;">₹{p['price']:,}</div>
             </div>
             """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Trovia AI Assistant", layout="wide")
+    st.set_page_config(page_title="Trovia — Arya Chat", layout="wide")
     show_ai_assistant()
