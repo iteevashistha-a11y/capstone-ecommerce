@@ -412,6 +412,11 @@ def inject_global_css():
     .stTabs > div:nth-child(2) {
         padding: 20px !important;
     }
+
+    /* Hide password eye icon */
+    button[data-testid="stPasswordFieldToggle"] {
+        display: none !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
