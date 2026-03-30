@@ -168,50 +168,65 @@ def show_products():
         if st.button("🔄 Reset Filters", use_container_width=True):
             st.rerun()
 
-    # ── Filter Products ────────────────────────────────────────────────────────
-    filtered = list(PRODUCTS)
-
+    # ── Filter Products via ProductSearchAgent (Ruflo swarm) ──────────────────
+    agent_result = None
     if search_query:
-        q = search_query.lower()
-        filtered = [
-            p for p in filtered
-            if q in p["name"].lower()
-            or q in p["description"].lower()
-            or q in p["category"].lower()
-            or any(q in tag for tag in p["tags"])
-        ]
+        from agents.trovia_agents import ProductSearchAgent
+        agent = ProductSearchAgent()
+        filters = {}
+        if price_range != (0, 150000):
+            filters["max_price"] = price_range[1]
+            filters["min_price"] = price_range[0]
+        if selected_category != "All Categories":
+            filters["category"] = selected_category
+        if min_rating > 0:
+            filters["min_rating"] = min_rating
+        if in_stock_only:
+            filters["in_stock"] = True
+        agent_result = agent.run(search_query, filters)
+        filtered = agent_result.data if agent_result.status == "success" else []
+    else:
+        filtered = list(PRODUCTS)
+        if selected_category != "All Categories":
+            filtered = [p for p in filtered if p["category"] == selected_category]
+        filtered = [p for p in filtered if price_range[0] <= p["price"] <= price_range[1]]
+        filtered = [p for p in filtered if p["rating"] >= min_rating]
+        if in_stock_only:
+            filtered = [p for p in filtered if p["in_stock"]]
 
-    if selected_category != "All Categories":
-        filtered = [p for p in filtered if p["category"] == selected_category]
-
-    filtered = [p for p in filtered if price_range[0] <= p["price"] <= price_range[1]]
-    filtered = [p for p in filtered if p["rating"] >= min_rating]
-
-    if in_stock_only:
-        filtered = [p for p in filtered if p["in_stock"]]
-
-    # Sort
-    if sort_by == "Price: Low to High":
-        filtered.sort(key=lambda x: x["price"])
-    elif sort_by == "Price: High to Low":
-        filtered.sort(key=lambda x: x["price"], reverse=True)
-    elif sort_by == "Rating: High to Low":
-        filtered.sort(key=lambda x: x["rating"], reverse=True)
-    elif sort_by == "Name: A to Z":
-        filtered.sort(key=lambda x: x["name"])
+    # Sort (only when not using agent — agent returns by relevance score)
+    if not search_query:
+        if sort_by == "Price: Low to High":
+            filtered.sort(key=lambda x: x["price"])
+        elif sort_by == "Price: High to Low":
+            filtered.sort(key=lambda x: x["price"], reverse=True)
+        elif sort_by == "Rating: High to Low":
+            filtered.sort(key=lambda x: x["rating"], reverse=True)
+        elif sort_by == "Name: A to Z":
+            filtered.sort(key=lambda x: x["name"])
 
     # ── Agent Activity Banner ──────────────────────────────────────────────────
-    if search_query:
+    if search_query and agent_result:
+        latency = f"{agent_result.latency_ms:.1f}ms"
+        status_color = "#10b981" if filtered else "#ef4444"
+        status_label = f"✅ {len(filtered)} results" if filtered else "⚠️ No matches"
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg,#dbeafe,#eff6ff); border:1px solid #93c5fd;
-             border-radius:12px; padding:0.7rem 1rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
-            <span style="font-size:1.2rem;">🤖</span>
-            <span style="color:#1e3a8a; font-weight:700;">ProductSearchAgent</span>
-            <span style="color:#475569; font-size:0.9rem;">— running semantic search for <strong>"{search_query}"</strong> across {len(PRODUCTS)} products</span>
-            <span style="margin-left:auto; background:#10b981; color:white; border-radius:20px;
-                 padding:0.2rem 0.8rem; font-size:0.78rem; font-weight:700;">✅ {len(filtered)} results</span>
+        <div style="background:linear-gradient(135deg,#dbeafe,#eff6ff); border:1px solid #93c5fd;
+             border-radius:12px; padding:0.8rem 1.2rem; margin-bottom:1rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <span style="font-size:1.2rem;">🤖</span>
+                <strong style="color:#1e3a8a;">ProductSearchAgent</strong>
+                <span style="color:#475569; font-size:0.9rem;">— Ruflo swarm · {len(PRODUCTS)} products scanned · {latency}</span>
+                <span style="margin-left:auto; background:{status_color}; color:white; border-radius:20px;
+                     padding:0.2rem 0.9rem; font-size:0.78rem; font-weight:700;">{status_label}</span>
+            </div>
+            <div style="color:#64748b; font-size:0.82rem; margin-top:0.3rem;">
+                Scoring by: name · tags · category · brand · description
+            </div>
         </div>
         """, unsafe_allow_html=True)
+        if not filtered:
+            st.info(f"🤖 No products matched **\"{search_query}\"**. Try: *phone*, *shoes*, *books*, *laptop*")
 
     # ── Results Summary ────────────────────────────────────────────────────────
     col_info, _ = st.columns([3, 1])
